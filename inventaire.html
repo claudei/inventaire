@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Inventaire triable</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f6f8fa;
+      margin: 0;
+      color: #333;
+    }
+    .container {
+      max-width: 980px;
+      margin: 30px auto;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+      padding: 30px;
+    }
+    h2 {
+      color: #0078d7;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 1em;
+    }
+    th, td {
+      border: 1px solid #e3e3e3;
+      padding: 8px 7px;
+      text-align: left;
+    }
+    th {
+      background: #f3f3f3;
+      color: #0078d7;
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+    }
+    th.sort-asc::after {
+      content: " ▲";
+      font-size: 0.9em;
+      color: #333;
+    }
+    th.sort-desc::after {
+      content: " ▼";
+      font-size: 0.9em;
+      color: #333;
+    }
+    tbody tr.low-stock {
+      background: #fff3f3;
+    }
+    .alert {
+      color: #d8000c;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Inventaire triable par catégorie et nom de produit</h2>
+    <table id="inventaire">
+      <thead>
+        <tr>
+          <th data-type="string">Catégorie</th>
+          <th data-type="string">Nom du produit</th>
+          <th data-type="number">Longueur</th>
+          <th data-type="number">Largeur</th>
+          <th data-type="number">Hauteur</th>
+          <th data-type="number">Épaisseur</th>
+          <th data-type="number">Poids (lb/pied)</th>
+          <th data-type="number">Prix/lb</th>
+          <th data-type="number">Inventaire restant</th>
+          <th data-type="number">Seuil min</th>
+          <th data-type="number">Valeur</th>
+          <th data-type="string">Alerte</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="low-stock">
+          <td>Aluminium</td>
+          <td>Tube Aluminium 2"</td>
+          <td>10</td>
+          <td>3</td>
+          <td>2</td>
+          <td>0.5</td>
+          <td>2.5</td>
+          <td>3.10</td>
+          <td class="alert">3</td>
+          <td>5</td>
+          <td>9.30</td>
+          <td class="alert">⚠️</td>
+        </tr>
+        <tr>
+          <td>Aluminium</td>
+          <td>Profilé Aluminium L</td>
+          <td>12</td>
+          <td>4</td>
+          <td>2</td>
+          <td>0.4</td>
+          <td>2.3</td>
+          <td>2.95</td>
+          <td>8</td>
+          <td>4</td>
+          <td>18.60</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Acier</td>
+          <td>Plaque Acier</td>
+          <td>20</td>
+          <td>8</td>
+          <td>1</td>
+          <td>0.8</td>
+          <td>4.0</td>
+          <td>2.30</td>
+          <td>13</td>
+          <td>10</td>
+          <td>29.90</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>Acier</td>
+          <td>Tôle Acier Perforée</td>
+          <td>15</td>
+          <td>6</td>
+          <td>2</td>
+          <td>0.6</td>
+          <td>3.8</td>
+          <td>2.10</td>
+          <td>5</td>
+          <td>7</td>
+          <td>10.50</td>
+          <td></td>
+        </tr>
+        <tr>
+          <td>PVC</td>
+          <td>Tuyau PVC 4"</td>
+          <td>8</td>
+          <td>4</td>
+          <td>2</td>
+          <td>0.3</td>
+          <td>1.6</td>
+          <td>1.20</td>
+          <td>18</td>
+          <td>7</td>
+          <td>21.60</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <script>
+    // Tri du tableau par clic sur les titres
+    document.querySelectorAll("#inventaire th").forEach(function(th, idx) {
+      th.addEventListener("click", function() {
+        let table = th.closest("table");
+        let tbody = table.querySelector("tbody");
+        let rows = Array.from(tbody.querySelectorAll("tr"));
+        let type = th.getAttribute("data-type") || "string";
+        let isAsc = !th.classList.contains("sort-asc");
+
+        // Retire les classes de tri sur les autres colonnes
+        table.querySelectorAll("th").forEach(h => h.classList.remove("sort-asc", "sort-desc"));
+        th.classList.add(isAsc ? "sort-asc" : "sort-desc");
+
+        rows.sort(function(a, b) {
+          let cellA = a.children[idx].textContent.trim();
+          let cellB = b.children[idx].textContent.trim();
+          if(type === "number") {
+            cellA = parseFloat(cellA.replace(',', '.')) || 0;
+            cellB = parseFloat(cellB.replace(',', '.')) || 0;
+          }
+          if(isAsc) {
+            if(cellA < cellB) return -1;
+            if(cellA > cellB) return 1;
+          } else {
+            if(cellA > cellB) return -1;
+            if(cellA < cellB) return 1;
+          }
+          return 0;
+        });
+
+        // Réinsère les lignes triées
+        rows.forEach(row => tbody.appendChild(row));
+      });
+    });
+  </script>
+</body>
+</html>
