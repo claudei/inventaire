@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test d'Authentification - Inventaire</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #f6f8fa;
+            margin: 0;
+            color: #333;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.10);
+            padding: 30px;
+        }
+        h1, h2 {
+            color: #0078d7;
+            text-align: center;
+        }
+        .auth-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #e3e3e3;
+            border-radius: 8px;
+        }
+        .form-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background: #0078d7;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #106ebe;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .hidden {
+            display: none;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test de Sécurité - Inventaire Supabase</h1>
+        
+        <div id="auth-section" class="auth-section">
+            <h2>Authentification</h2>
+            <div id="login-form">
+                <div class="form-group">
+                    <label for="email">Email :</label>
+                    <input type="email" id="email" placeholder="votre@email.com">
+                </div>
+                <div class="form-group">
+                    <label for="password">Mot de passe :</label>
+                    <input type="password" id="password" placeholder="Votre mot de passe">
+                </div>
+                <button onclick="signIn()">Se connecter</button>
+                <button onclick="signUp()">S'inscrire</button>
+            </div>
+            
+            <div id="user-info" class="hidden">
+                <p>Connecté en tant que : <span id="user-email"></span></p>
+                <button onclick="signOut()">Se déconnecter</button>
+            </div>
+        </div>
+
+        <div class="auth-section">
+            <h2>Tests de Sécurité</h2>
+            <button onclick="testUnauthenticatedAccess()" id="test-unauth">Test Accès Non Authentifié</button>
+            <button onclick="testAuthenticatedAccess()" id="test-auth" disabled>Test Accès Authentifié</button>
+            <button onclick="testDataIsolation()" id="test-isolation" disabled>Test Isolation des Données</button>
+        </div>
+
+        <div class="auth-section">
+            <h2>Résultats des Tests</h2>
+            <div id="test-results"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.skypack.dev/@supabase/supabase-js';
+        
+        // Configuration Supabase (À MODIFIER avec vos vraies valeurs)
+        const supabaseUrl = 'https://your-supabase-url.supabase.co';
+        const supabaseKey = 'your-anon-key';
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        let currentUser = null;
+
+        // Fonctions d'authentification
+        window.signUp = async function() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (!email || !password) {
+                showStatus('Veuillez remplir tous les champs', 'error');
+                return;
+            }
+
+            try {
+                const { data, error } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                });
+
+                if (error) throw error;
+                
+                showStatus('Inscription réussie ! Vérifiez votre email pour confirmer votre compte.', 'success');
+            } catch (error) {
+                showStatus(`Erreur d'inscription : ${error.message}`, 'error');
+            }
+        };
+
+        window.signIn = async function() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            if (!email || !password) {
+                showStatus('Veuillez remplir tous les champs', 'error');
+                return;
+            }
+
+            try {
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password,
+                });
+
+                if (error) throw error;
+                
+                currentUser = data.user;
+                updateAuthUI();
+                showStatus('Connexion réussie !', 'success');
+            } catch (error) {
+                showStatus(`Erreur de connexion : ${error.message}`, 'error');
+            }
+        };
+
+        window.signOut = async function() {
+            try {
+                const { error } = await supabase.auth.signOut();
+                if (error) throw error;
+                
+                currentUser = null;
+                updateAuthUI();
+                showStatus('Déconnexion réussie', 'info');
+            } catch (error) {
+                showStatus(`Erreur de déconnexion : ${error.message}`, 'error');
+            }
+        };
+
+        // Tests de sécurité
+        window.testUnauthenticatedAccess = async function() {
+            addTestResult('Test d\'accès non authentifié', '🧪 Test en cours...');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('inventaire')
+                    .select('*');
+
+                if (error) {
+                    addTestResult('Test d\'accès non authentifié', `✅ SUCCÈS : Accès refusé comme attendu. Erreur: ${error.message}`);
+                } else {
+                    addTestResult('Test d\'accès non authentifié', `❌ ÉCHEC : L'accès non authentifié a été autorisé ! Données récupérées: ${data?.length || 0} éléments`);
+                }
+            } catch (error) {
+                addTestResult('Test d\'accès non authentifié', `✅ SUCCÈS : Exception levée comme attendu: ${error.message}`);
+            }
+        };
+
+        window.testAuthenticatedAccess = async function() {
+            if (!currentUser) {
+                showStatus('Vous devez être connecté pour ce test', 'error');
+                return;
+            }
+
+            addTestResult('Test d\'accès authentifié', '🧪 Test en cours...');
+            
+            try {
+                // Test de lecture
+                const { data: readData, error: readError } = await supabase
+                    .from('inventaire')
+                    .select('*');
+
+                if (readError) {
+                    addTestResult('Test d\'accès authentifié - Lecture', `❌ ÉCHEC : ${readError.message}`);
+                } else {
+                    addTestResult('Test d\'accès authentifié - Lecture', `✅ SUCCÈS : Lecture autorisée. ${readData?.length || 0} éléments trouvés`);
+                }
+
+                // Test d'insertion
+                const testItem = {
+                    categorie: 'Test',
+                    nom_produit: 'Produit Test ' + Date.now(),
+                    longueur: 10.5,
+                    poids: 1.5,
+                    prix_livre: 2.0,
+                    inventaire_restant: 5,
+                    seuil_min: 2
+                };
+
+                const { data: insertData, error: insertError } = await supabase
+                    .from('inventaire')
+                    .insert([testItem])
+                    .select();
+
+                if (insertError) {
+                    addTestResult('Test d\'accès authentifié - Insertion', `❌ ÉCHEC : ${insertError.message}`);
+                } else {
+                    addTestResult('Test d\'accès authentifié - Insertion', `✅ SUCCÈS : Insertion autorisée. ID: ${insertData[0]?.id}`);
+                    
+                    // Test de suppression du test item
+                    if (insertData[0]?.id) {
+                        const { error: deleteError } = await supabase
+                            .from('inventaire')
+                            .delete()
+                            .eq('id', insertData[0].id);
+                        
+                        if (!deleteError) {
+                            addTestResult('Test d\'accès authentifié - Suppression', '✅ SUCCÈS : Suppression du test item réussie');
+                        }
+                    }
+                }
+            } catch (error) {
+                addTestResult('Test d\'accès authentifié', `❌ ERREUR : ${error.message}`);
+            }
+        };
+
+        window.testDataIsolation = function() {
+            addTestResult('Test d\'isolation des données', '⚠️ Ce test nécessite deux comptes utilisateurs différents pour être complet. Connectez-vous avec un autre compte pour vérifier que vous ne voyez que vos propres données.');
+        };
+
+        // Fonctions utilitaires
+        function updateAuthUI() {
+            const loginForm = document.getElementById('login-form');
+            const userInfo = document.getElementById('user-info');
+            const testAuth = document.getElementById('test-auth');
+            const testIsolation = document.getElementById('test-isolation');
+
+            if (currentUser) {
+                loginForm.classList.add('hidden');
+                userInfo.classList.remove('hidden');
+                document.getElementById('user-email').textContent = currentUser.email;
+                testAuth.disabled = false;
+                testIsolation.disabled = false;
+            } else {
+                loginForm.classList.remove('hidden');
+                userInfo.classList.add('hidden');
+                testAuth.disabled = true;
+                testIsolation.disabled = true;
+            }
+        }
+
+        function showStatus(message, type) {
+            const results = document.getElementById('test-results');
+            const status = document.createElement('div');
+            status.className = `status ${type}`;
+            status.textContent = message;
+            results.appendChild(status);
+            
+            // Auto-remove after 5 seconds for success/info messages
+            if (type === 'success' || type === 'info') {
+                setTimeout(() => status.remove(), 5000);
+            }
+        }
+
+        function addTestResult(testName, result) {
+            const results = document.getElementById('test-results');
+            const resultDiv = document.createElement('div');
+            resultDiv.innerHTML = `<strong>${testName}:</strong><br><pre>${result}</pre>`;
+            results.appendChild(resultDiv);
+        }
+
+        // Vérifier l'état d'authentification au chargement
+        supabase.auth.onAuthStateChange((event, session) => {
+            currentUser = session?.user || null;
+            updateAuthUI();
+        });
+
+        // Instructions initiales
+        showStatus('ℹ️ Avant de commencer les tests, assurez-vous d\'avoir configuré les URL et clés Supabase dans ce fichier et d\'avoir exécuté les scripts SQL de configuration.', 'info');
+    </script>
+</body>
+</html>
