@@ -1,10 +1,579 @@
-<html>
+<!DOCTYPE html>
+<html lang="fr">
 <head>
-    <title>Application d'inventaire complète</title>
+  <meta charset="UTF-8">
+  <title>Inventaire Synchronisé - Résumé Projet par Produit</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { background: #f6f8fa; font-family: Arial, sans-serif; margin: 0; color: #222; }
+    .menu { display: flex; justify-content: center; background: #2196f3; box-shadow: 0 1px 8px rgba(0,0,0,0.07);}
+    .menu button {flex: 1; padding: 20px 0; border: none; background: #2196f3; color: #fff; font-size: 1.1em; font-weight: 600; cursor: pointer; transition: background 0.16s; border-right: 1px solid #1976d2;}
+    .menu button:last-child {border-right: none;}
+    .menu button.active, .menu button:hover {background: #1976d2;}
+    .module {display: none; padding: 34px 0 10px 0;}
+    .module.active {display: block;}
+    .container {max-width: 1200px; margin: auto; background: #fff; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.10); padding: 32px 32px 32px 32px; overflow-x: auto; margin-top: 30px;}
+    h1, h2 {text-align: center; color: #2196f3; margin-bottom: 18px; font-size: 2em; font-weight: 700;}
+    h2 {font-size: 1.4em; color: #0078d7; margin-bottom: 28px;}
+    .flex-header {display: flex; justify-content: flex-end; gap: 24px; align-items: center; margin-bottom: 18px;}
+    .flex-header label {font-weight: 500; margin-right: 8px; color: #444;}
+    .flex-header input[type="date"] {font-size: 1.07em; padding: 7px 8px; border-radius: 4px; border: 1.5px solid #b4d6f5; background: #f8fbff;}
+    .total-inventaire {font-size: 1.2em; font-weight: 600; color: #0a6c1d; margin-left: 12px; background: #e8f5e9; padding: 7px 16px; border-radius: 6px; border: 1.2px solid #b0e1bb; display: inline-block;}
+    .table-container {width: 100%; overflow-x: auto;}
+    table {width: 100%; min-width: 900px; border-collapse: separate; border-spacing: 0; margin-top: 16px; background: #fff; table-layout: fixed;}
+    thead th {background: #f0f7fa; color: #2196f3; cursor: pointer; font-weight: 600; font-size: 1em; padding: 8px 4px; border: 1px solid #e0e0e0; vertical-align: middle; text-align: center;}
+    tbody td {border: 1px solid #e0e0e0; padding: 7px 4px; font-size: 1em; vertical-align: middle; text-align: center;}
+    th, td {text-align: center;}
+    select, input[type="number"], input[type="text"] {padding: 5px 6px; border-radius: 4px; border: 1px solid #b4d6f5; font-size: 1em; background: #fafcff; box-sizing: border-box; text-align: center; width: 95%;}
+    input[type="number"]:disabled {background: #f5f5f5; color: #999;}
+    .btn {padding: 8px 18px; border-radius: 4px; border: none; font-weight: 500; margin: 6px 2px; cursor: pointer; color: #fff; background: #2196f3; transition: background 0.18s;}
+    .btn:hover {background: #1976d2;}
+    .btn-remove {background: #eb7536;}
+    .btn-remove:hover {background: #c25112;}
+    tr:hover {background: #f6faff;}
+    .rapport-header {display: flex; justify-content: space-between; align-items: center; margin-bottom: 26px;}
+    .rapport-header .project-title {font-size: 1.4em; font-weight: 700; color: #0078d7;}
+    .rapport-header .cost-total {font-size: 1.2em; font-weight: 700; color: #0a6c1d; background: #e8f5e9; padding: 7px 18px; border-radius: 7px; border: 1.2px solid #b0e1bb;}
+    .rapport-header select {font-size: 1.07em; padding: 7px 8px; border-radius: 4px; border: 1.5px solid #b4d6f5; background: #f8fbff; margin-right: 20px;}
+    .simple-form {max-width: 480px; margin: 30px auto;}
+    .simple-form input, .simple-form select, .simple-form textarea {width: 100%; margin-bottom: 14px; padding: 9px 8px; border-radius: 4px; border: 1.2px solid #b4d6f5;}
+    .simple-form label {font-weight: 600; margin-bottom: 4px; display: block;}
+    .simple-form button {padding: 10px 18px;}
+    .item-list {margin: 18px 0;}
+    .item-row {display: flex; align-items: center; margin-bottom: 7px;}
+    .item-row span {flex: 1;}
+    .item-row button {margin-left: 14px;}
+    .dims-row {display: flex; gap: 7px;}
+    .dims-row input {flex:1;}
+    @media (max-width: 900px) {
+      .container {padding: 10px 3vw;}
+      table {min-width: 730px; font-size: 0.9em;}
+      thead th, tbody td {padding: 6px 2px;}
+    }
+    @media print {
+      body { background: #fff; }
+      .menu, .module:not(#resume-projet) { display: none !important; }
+      #resume-projet { display: block !important; }
+      #resume-projet .container { box-shadow: none; }
+      button.btn, .rapport-header select { display: none !important; }
+    }
+  </style>
 </head>
 <body>
-    <h1>Résumé par projet</h1>
-    <!-- Contenu de inventaire-app-complet-resume-projet_Version2.html -->
-    <p>Application d'inventaire complète avec tous les modules.</p>
+  <div class="menu">
+    <button class="active" onclick="afficheModule('inventaire')">Inventaire triable</button>
+    <button onclick="afficheModule('categories')">Catégories</button>
+    <button onclick="afficheModule('fiche-produit')">Fiche Produit</button>
+    <button onclick="afficheModule('entrees')">Entrées/Sorties</button>
+    <button onclick="afficheModule('projets')">Projets</button>
+    <button onclick="afficheModule('resume-projet')">Résumé par projet</button>
+  </div>
+
+  <!-- Inventaire Triable -->
+  <div id="inventaire" class="module active">
+    <div class="container">
+      <h1>Inventaire triable par catégorie et nom de produit</h1>
+      <div class="flex-header">
+        <label for="date-inventaire">Date :</label>
+        <input type="date" id="date-inventaire">
+        <span class="total-inventaire">Total inventaire : <span id="total-inventaire-val">0.00</span> $</span>
+      </div>
+      <div class="table-container">
+        <table id="table-inventaire">
+          <thead>
+            <tr>
+              <th>Catégorie</th>
+              <th>Produit</th>
+              <th>Longueur (pieds)</th>
+              <th>Poids (lb/pied)</th>
+              <th>Prix/livre ($)</th>
+              <th>Prix/barre ($)</th>
+              <th>Inventaire restant (barres)</th>
+              <th>Seuil minimum (barres)</th>
+              <th>À commander (barres)</th>
+              <th>Valeur totale ($)</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="inventaire-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Catégories -->
+  <div id="categories" class="module">
+    <div class="container simple-form">
+      <h2>Gestion des catégories</h2>
+      <form id="form-categorie">
+        <label for="nom-categorie">Nom de la catégorie :</label>
+        <input type="text" id="nom-categorie" required>
+        <button type="submit" class="btn">Ajouter</button>
+      </form>
+      <div class="item-list" id="liste-categories"></div>
+    </div>
+  </div>
+
+  <!-- Fiche Produit -->
+  <div id="fiche-produit" class="module">
+    <div class="container simple-form">
+      <h2>Fiche Produit</h2>
+      <form id="form-produit">
+        <label for="select-produit">Produit existant :</label>
+        <select id="select-produit"><option value="">Nouveau produit</option></select>
+        <label for="categorie-produit">Catégorie :</label>
+        <select id="categorie-produit" required></select>
+        <label>Dimensions :</label>
+        <div class="dims-row">
+          <input type="text" id="largeur-produit" placeholder="Largeur" required>
+          <input type="text" id="hauteur-produit" placeholder="Hauteur" required>
+          <input type="text" id="epaisseur-produit" placeholder="Épaisseur" required>
+        </div>
+        <label for="nom-produit">Nom du produit :</label>
+        <input type="text" id="nom-produit" readonly style="background:#f0f0f0;color:#777;">
+        <label for="longueur-produit">Longueur d'une barre (pieds) :</label>
+        <input type="number" step="0.01" id="longueur-produit" required>
+        <label for="poids-produit">Poids (lb/pied) :</label>
+        <input type="number" step="0.01" id="poids-produit" required>
+        <label for="prix-livre-produit">Prix/livre ($) :</label>
+        <input type="number" step="0.01" id="prix-livre-produit" required>
+        <label for="seuil-produit">Seuil minimum (nombre de barres) :</label>
+        <input type="number" step="0.01" id="seuil-produit" required>
+        <button type="submit" class="btn">Enregistrer</button>
+      </form>
+      <div class="item-list" id="liste-produits"></div>
+    </div>
+  </div>
+
+  <!-- Entrées/Sorties -->
+  <div id="entrees" class="module">
+    <div class="container simple-form">
+      <h2>Entrées et sorties</h2>
+      <form id="form-entrees">
+        <label for="date-mouvement">Date :</label>
+        <input type="date" id="date-mouvement" required>
+        <label for="type-mouvement">Type :</label>
+        <select id="type-mouvement">
+          <option value="entree">Entrée (barres)</option>
+          <option value="sortie">Sortie (pouces)</option>
+        </select>
+        <label for="produit-mouvement">Produit :</label>
+        <select id="produit-mouvement"></select>
+        <label for="projet-mouvement">Projet :</label>
+        <select id="projet-mouvement"></select>
+        <label for="quantite-mouvement">Quantité :</label>
+        <input type="number" step="0.01" id="quantite-mouvement" required>
+        <button type="submit" class="btn">Ajouter</button>
+      </form>
+      <div class="item-list" id="liste-mouvements"></div>
+    </div>
+  </div>
+
+  <!-- Projets -->
+  <div id="projets" class="module">
+    <div class="container simple-form">
+      <h2>Gestion des projets</h2>
+      <form id="form-projet">
+        <label for="nom-projet">Nom du projet :</label>
+        <input type="text" id="nom-projet" required>
+        <label for="desc-projet">Description :</label>
+        <textarea id="desc-projet"></textarea>
+        <button type="submit" class="btn">Ajouter</button>
+      </form>
+      <div class="item-list" id="liste-projets"></div>
+    </div>
+  </div>
+
+  <!-- Résumé par projet -->
+  <div id="resume-projet" class="module">
+    <div class="container">
+      <h2>Résumé par projet</h2>
+      <div class="rapport-header">
+        <select id="select-rapport-projet"></select>
+        <span class="project-title" id="rapport-project-title"></span>
+        <span class="cost-total" id="rapport-project-total"></span>
+        <button class="btn" onclick="window.print()">Imprimer en PDF</button>
+      </div>
+      <div class="table-container">
+        <table id="table-resume-projet">
+          <thead>
+            <tr>
+              <th onclick="sortProjetTable(0)">Produit utilisé</th>
+              <th onclick="sortProjetTable(1)">Quantité totale (pieds)</th>
+              <th onclick="sortProjetTable(2)">Poids total (livres)</th>
+              <th onclick="sortProjetTable(3)">Coût total ($)</th>
+            </tr>
+          </thead>
+          <tbody id="resume-projet-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+<script>
+    let categories = ["Aluminium", "Acier", "Plastique"];
+    let produits = [];
+    let projets = [];
+    let mouvements = [];
+    function afficheModule(module) {
+      document.querySelectorAll('.module').forEach(m => m.classList.remove('active'));
+      document.getElementById(module).classList.add('active');
+      document.querySelectorAll('.menu button').forEach(btn => btn.classList.remove('active'));
+      let btns = Array.from(document.querySelectorAll('.menu button'));
+      if (module === "inventaire") btns[0].classList.add('active');
+      if (module === "categories") btns[1].classList.add('active');
+      if (module === "fiche-produit") btns[2].classList.add('active');
+      if (module === "entrees") btns[3].classList.add('active');
+      if (module === "projets") btns[4].classList.add('active');
+      if (module === "resume-projet") btns[5].classList.add('active');
+      if(module==="resume-projet") { majListeProjetsResume(); majResumeProjet(); }
+    }
+    function majCategorieProduit() {
+      let select = document.getElementById("categorie-produit");
+      select.innerHTML = "";
+      categories.forEach(cat => {
+        let opt = document.createElement("option");
+        opt.value = cat;
+        opt.textContent = cat;
+        select.appendChild(opt);
+      });
+    }
+    function majListeCategories() {
+      let liste = document.getElementById("liste-categories");
+      liste.innerHTML = "";
+      categories.forEach((cat, i) => {
+        let row = document.createElement("div");
+        row.className = "item-row";
+        let span = document.createElement("span");
+        span.textContent = cat;
+        row.appendChild(span);
+        let btn = document.createElement("button");
+        btn.className = "btn btn-remove";
+        btn.textContent = "Supprimer";
+        btn.onclick = function() {
+          categories.splice(i, 1);
+          majCategorieProduit();
+          majListeCategories();
+        };
+        row.appendChild(btn);
+        liste.appendChild(row);
+      });
+    }
+    document.getElementById("form-categorie").onsubmit = function(e) {
+      e.preventDefault();
+      let val = document.getElementById("nom-categorie").value.trim();
+      if (val && !categories.includes(val)) categories.push(val);
+      document.getElementById("nom-categorie").value = "";
+      majCategorieProduit();
+      majListeCategories();
+      majProduitInventaire();
+    };
+    function majProjetEntrees() {
+      let select = document.getElementById("projet-mouvement");
+      select.innerHTML = "";
+      projets.forEach(prj => {
+        let opt = document.createElement("option");
+        opt.value = prj.nom;
+        opt.textContent = prj.nom;
+        select.appendChild(opt);
+      });
+    }
+    function majListeProjets() {
+      let liste = document.getElementById("liste-projets");
+      liste.innerHTML = "";
+      projets.forEach((prj, i) => {
+        let row = document.createElement("div");
+        row.className = "item-row";
+        let span = document.createElement("span");
+        span.textContent = prj.nom + (prj.desc ? " : " + prj.desc : "");
+        row.appendChild(span);
+        let btn = document.createElement("button");
+        btn.className = "btn btn-remove";
+        btn.textContent = "Supprimer";
+        btn.onclick = function() {
+          projets.splice(i, 1);
+          majProjetEntrees();
+          majListeProjets();
+        };
+        row.appendChild(btn);
+        liste.appendChild(row);
+      });
+    }
+    document.getElementById("form-projet").onsubmit = function(e) {
+      e.preventDefault();
+      let nom = document.getElementById("nom-projet").value.trim();
+      let desc = document.getElementById("desc-projet").value.trim();
+      if (nom && !projets.find(p=>p.nom===nom)) projets.push({nom, desc});
+      document.getElementById("nom-projet").value = "";
+      document.getElementById("desc-projet").value = "";
+      majProjetEntrees();
+      majListeProjets();
+      majListeProjetsResume();
+    };
+    function majProduitInventaire() {
+      majInventaire();
+      majProduitEntrees();
+      majListeProduits();
+      majSelectProduitFiche();
+      majResumeProjet();
+    }
+    function majProduitEntrees() {
+      let select = document.getElementById("produit-mouvement");
+      select.innerHTML = "";
+      produits.forEach(prd => {
+        let opt = document.createElement("option");
+        opt.value = prd.nom;
+        opt.textContent = prd.nom;
+        select.appendChild(opt);
+      });
+    }
+    function majListeProduits() {
+      let liste = document.getElementById("liste-produits");
+      liste.innerHTML = "";
+      produits.forEach((prd, i) => {
+        let row = document.createElement("div");
+        row.className = "item-row";
+        let span = document.createElement("span");
+        span.textContent = `${prd.nom} (${prd.categorie}), Longueur: ${prd.longueur} pieds, Poids: ${prd.poids} lb/pied, Prix/livre: ${prd.prixLivre} $, Seuil: ${prd.seuil} barres`;
+        row.appendChild(span);
+        let btn = document.createElement("button");
+        btn.className = "btn btn-remove";
+        btn.textContent = "Supprimer";
+        btn.onclick = function() {
+          produits.splice(i, 1);
+          majProduitInventaire();
+        };
+        row.appendChild(btn);
+        liste.appendChild(row);
+      });
+    }
+    function majSelectProduitFiche() {
+      let select = document.getElementById("select-produit");
+      select.innerHTML = '<option value="">Nouveau produit</option>';
+      produits.forEach((p, i) => {
+        let opt = document.createElement("option");
+        opt.value = i;
+        opt.textContent = p.nom;
+        select.appendChild(opt);
+      });
+    }
+    document.getElementById("select-produit").onchange = function() {
+      let idx = this.value;
+      if (idx === "") {
+        document.getElementById("categorie-produit").value = categories[0] || "";
+        document.getElementById("largeur-produit").value = "";
+        document.getElementById("hauteur-produit").value = "";
+        document.getElementById("epaisseur-produit").value = "";
+        document.getElementById("nom-produit").value = "";
+        document.getElementById("longueur-produit").value = "";
+        document.getElementById("poids-produit").value = "";
+        document.getElementById("prix-livre-produit").value = "";
+        document.getElementById("seuil-produit").value = "";
+      } else {
+        let p = produits[idx];
+        document.getElementById("categorie-produit").value = p.categorie;
+        let dims = p.nom.split(' x ');
+        document.getElementById("largeur-produit").value = dims[0] || "";
+        document.getElementById("hauteur-produit").value = dims[1] || "";
+        document.getElementById("epaisseur-produit").value = dims[2] || "";
+        document.getElementById("nom-produit").value = p.nom;
+        document.getElementById("longueur-produit").value = p.longueur;
+        document.getElementById("poids-produit").value = p.poids;
+        document.getElementById("prix-livre-produit").value = p.prixLivre;
+        document.getElementById("seuil-produit").value = p.seuil;
+      }
+    };
+    function genererNomProduit() {
+      let l = document.getElementById("largeur-produit").value.trim();
+      let h = document.getElementById("hauteur-produit").value.trim();
+      let e = document.getElementById("epaisseur-produit").value.trim();
+      let nom = [l, h, e].filter(Boolean).join(' x ');
+      document.getElementById("nom-produit").value = nom;
+    }
+    ["largeur-produit","hauteur-produit","epaisseur-produit"].forEach(id=>{
+      document.getElementById(id).addEventListener('input', genererNomProduit);
+    });
+    document.getElementById("form-produit").onsubmit = function(e) {
+      e.preventDefault();
+      let idx = document.getElementById("select-produit").value;
+      let cat = document.getElementById("categorie-produit").value;
+      let nom = document.getElementById("nom-produit").value.trim();
+      let longueur = parseFloat(document.getElementById("longueur-produit").value);
+      let poids = parseFloat(document.getElementById("poids-produit").value);
+      let prixLivre = parseFloat(document.getElementById("prix-livre-produit").value);
+      let seuil = parseFloat(document.getElementById("seuil-produit").value);
+      if (cat && nom && !isNaN(longueur) && !isNaN(poids) && !isNaN(prixLivre) && !isNaN(seuil)) {
+        if (idx === "") {
+          produits.push({
+            categorie:cat, nom, longueur, poids, prixLivre, seuil
+          });
+        } else {
+          Object.assign(produits[idx], {categorie:cat, nom, longueur, poids, prixLivre, seuil});
+        }
+        majProduitInventaire();
+        majSelectProduitFiche();
+        document.getElementById("select-produit").value = "";
+        document.getElementById("categorie-produit").value = categories[0] || "";
+        document.getElementById("largeur-produit").value = "";
+        document.getElementById("hauteur-produit").value = "";
+        document.getElementById("epaisseur-produit").value = "";
+        document.getElementById("nom-produit").value = "";
+        document.getElementById("longueur-produit").value = "";
+        document.getElementById("poids-produit").value = "";
+        document.getElementById("prix-livre-produit").value = "";
+        document.getElementById("seuil-produit").value = "";
+      }
+    };
+    function majMouvements() {
+      let liste = document.getElementById("liste-mouvements");
+      liste.innerHTML = "";
+      mouvements.forEach((m, i) => {
+        let row = document.createElement("div");
+        row.className = "item-row";
+        let span = document.createElement("span");
+        span.textContent = `${m.date} | ${m.type === "entree" ? "Entrée" : "Sortie"} | ${m.produit} | ${m.projet||""} | ${m.quantite}${m.type==="entree"?" barres":" pouces"}`;
+        row.appendChild(span);
+        let btn = document.createElement("button");
+        btn.className = "btn btn-remove-entrees";
+        btn.textContent = "Supprimer";
+        btn.onclick = function() {
+          mouvements.splice(i, 1);
+          majInventaire();
+          majMouvements();
+          majResumeProjet();
+        };
+        row.appendChild(btn);
+        liste.appendChild(row);
+      });
+    }
+    document.getElementById("form-entrees").onsubmit = function(e) {
+      e.preventDefault();
+      let date = document.getElementById("date-mouvement").value;
+      let type = document.getElementById("type-mouvement").value;
+      let produit = document.getElementById("produit-mouvement").value;
+      let projet = document.getElementById("projet-mouvement").value;
+      let quantite = parseFloat(document.getElementById("quantite-mouvement").value);
+      if (date && produit && !isNaN(quantite)) {
+        mouvements.push({date, type, produit, projet, quantite});
+        majInventaire();
+        majMouvements();
+        majResumeProjet();
+        document.getElementById("quantite-mouvement").value = "";
+      }
+    };
+    function majInventaire() {
+      let tbody = document.getElementById("inventaire-body");
+      tbody.innerHTML = "";
+      let totalValeur = 0;
+      produits.forEach((prd, idx) => {
+        let inventaireRestantBarres = 0;
+        mouvements.forEach(m => {
+          if (m.produit === prd.nom) {
+            if (m.type === "entree") inventaireRestantBarres += m.quantite;
+            if (m.type === "sortie") inventaireRestantBarres -= (m.quantite / 12) / prd.longueur;
+          }
+        });
+        let prixBarre = prd.longueur * prd.poids * prd.prixLivre;
+        let valeurTotale = inventaireRestantBarres * prixBarre;
+        let aCommander = prd.seuil > inventaireRestantBarres ? Math.ceil(prd.seuil-inventaireRestantBarres) : 0;
+        totalValeur += valeurTotale;
+        let tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${prd.categorie}</td>
+          <td>${prd.nom}</td>
+          <td>${prd.longueur}</td>
+          <td>${prd.poids}</td>
+          <td>${prd.prixLivre}</td>
+          <td>${prixBarre.toFixed(2)}</td>
+          <td>${inventaireRestantBarres.toFixed(2)}</td>
+          <td>${prd.seuil.toFixed(2)}</td>
+          <td>${aCommander > 0 ? aCommander : "0"}</td>
+          <td>${valeurTotale.toFixed(2)}</td>
+          <td>
+            <button class="btn btn-remove" onclick="supprimerProduit(${idx})">Supprimer</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+      document.getElementById("total-inventaire-val").textContent = totalValeur.toFixed(2);
+    }
+    function supprimerProduit(idx) {
+      produits.splice(idx, 1);
+      majInventaire();
+      majProduitEntrees();
+      majListeProduits();
+      majSelectProduitFiche();
+      majResumeProjet();
+    }
+    function majListeProjetsResume() {
+      let select = document.getElementById("select-rapport-projet");
+      select.innerHTML = "";
+      let sortedProjects = projets.slice().sort((a,b)=>a.nom.localeCompare(b.nom));
+      sortedProjects.forEach(prj => {
+        let opt = document.createElement("option");
+        opt.value = prj.nom;
+        opt.textContent = prj.nom;
+        select.appendChild(opt);
+      });
+    }
+    function majResumeProjet() {
+      let select = document.getElementById("select-rapport-projet");
+      let projetNom = select.value || (projets[0]?.nom || "");
+      document.getElementById("rapport-project-title").textContent = projetNom;
+      let resume = {};
+      let totalProjet = 0;
+      mouvements.forEach(mov => {
+        if (mov.type !== "sortie" || mov.projet !== projetNom) return;
+        let produitObj = produits.find(p=>p.nom===mov.produit);
+        if (!produitObj) return;
+        if (!resume[mov.produit]) resume[mov.produit] = {quantitePieds:0, poids:0, cout:0};
+        let pieds = mov.quantite / 12;
+        let poidsTotal = pieds * produitObj.poids;
+        let prixBarre = produitObj.longueur * produitObj.poids * produitObj.prixLivre;
+        let prixPied = prixBarre / produitObj.longueur;
+        let coutTotal = pieds * prixPied;
+        resume[mov.produit].quantitePieds += pieds;
+        resume[mov.produit].poids += poidsTotal;
+        resume[mov.produit].cout += coutTotal;
+        totalProjet += coutTotal;
+      });
+      document.getElementById("rapport-project-total").textContent = "Coût total : " + totalProjet.toFixed(2) + " $";
+      let tbody = document.getElementById("resume-projet-body");
+      tbody.innerHTML = "";
+      Object.keys(resume).forEach(prod => {
+        let v = resume[prod];
+        let tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${prod}</td>
+          <td>${v.quantitePieds.toFixed(2)}</td>
+          <td>${v.poids.toFixed(2)}</td>
+          <td>${v.cout.toFixed(2)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+    function sortProjetTable(idx) {
+      let tbody = document.getElementById("resume-projet-body");
+      let rows = Array.from(tbody.querySelectorAll("tr"));
+      let asc = !tbody._sortAsc;
+      rows.sort((a,b)=>{
+        let v1=a.cells[idx].textContent, v2=b.cells[idx].textContent;
+        if(idx==0) return asc?v1.localeCompare(v2):v2.localeCompare(v1);
+        else return asc?(parseFloat(v1)-parseFloat(v2)):(parseFloat(v2)-parseFloat(v1));
+      });
+      rows.forEach(row=>tbody.appendChild(row));
+      tbody._sortAsc = asc;
+    }
+    majCategorieProduit();
+    majListeCategories();
+    majListeProjets();
+    majProjetEntrees();
+    majProduitInventaire();
+    majMouvements();
+    majSelectProduitFiche();
+    majListeProjetsResume();
+    majResumeProjet();
+    document.getElementById("select-rapport-projet").onchange = majResumeProjet;
+</script>
 </body>
 </html>
