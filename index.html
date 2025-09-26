@@ -58,6 +58,7 @@
       button.btn, .rapport-header select { display: none !important; }
     }
   </style>
+  <script src="script.js"></script>
 </head>
 <body>
   <div class="menu">
@@ -574,6 +575,26 @@
     majListeProjetsResume();
     majResumeProjet();
     document.getElementById("select-rapport-projet").onchange = majResumeProjet;
+    
+    // Initialize real-time synchronization when DOM is loaded
+    window.addEventListener('load', function() {
+      // Wait for script.js to load, then initialize real-time sync
+      setTimeout(() => {
+        if (typeof window.initRealtimeSync === 'function') {
+          window.initRealtimeSync();
+          console.log('Real-time synchronization initialized');
+        } else {
+          console.warn('Real-time sync functions not available');
+        }
+      }, 1000);
+    });
+    
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', function() {
+      if (typeof window.cleanupRealtimeSync === 'function') {
+        window.cleanupRealtimeSync();
+      }
+    });
 </script>
 </body>
 </html>
