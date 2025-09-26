@@ -1,53 +1,63 @@
-// Initialisation de Supabase
-const { createClient } = require('@supabase/supabase-js');
-const supabaseUrl = 'https://your-supabase-url.supabase.co';
-const supabaseKey = 'your-public-anon-key';
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+const supabaseUrl = 'https://tvadlycxavdbnaklbxrl.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2YWRseWN4YXZkYm5ha2xieHJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg4Mjc3OTIsImV4cCI6MjA3NDQwMzc5Mn0.RRTbSenOV4sAeoibw8XaBT9Cikds0k89nYpVWwEYKcI';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Fonction pour récupérer l'inventaire
 async function fetchInventory() {
-    const { data: inventory, error } = await supabase
-        .from('inventory')
-        .select('*');
-    if (error) console.error('Erreur lors de la récupération de l'inventaire:', error);
-    return inventory;
+  const { data: inventory, error } = await supabase
+    .from('inventaire')
+    .select('*');
+  if (error) console.error('Erreur lors de la récupération :', error);
+  return inventory;
 }
 
 // Fonction pour ajouter un nouvel article
-async function addItem(item) {
-    const { data, error } = await supabase
-        .from('inventory')
-        .insert([{ item }]);
-    if (error) console.error('Erreur lors de l'ajout de l'article:', error);
-    return data;
+window.ajouterProduit = async function(name, qty) {
+  const { data, error } = await supabase
+    .from('inventaire')
+    .insert([{ name, qty }]);
+  if (error) alert('Erreur ajout : ' + error.message);
+  await chargerInventaireInitial();
+  return data;
 }
 
 // Fonction pour supprimer un article
-async function deleteItem(id) {
-    const { data, error } = await supabase
-        .from('inventory')
-        .delete()
-        .match({ id });
-    if (error) console.error('Erreur lors de la suppression de l'article:', error);
-    return data;
+window.supprimerProduit = async function(id) {
+  const { data, error } = await supabase
+    .from('inventaire')
+    .delete()
+    .eq('id', id);
+  if (error) alert('Erreur suppression : ' + error.message);
+  await chargerInventaireInitial();
+  return data;
 }
 
 // Synchronisation en temps réel
 supabase
-    .from('inventory')
-    .on('INSERT', payload => {
-        console.log('Nouvel article ajouté:', payload.new);
-        // Mettre à jour l'UI ici
-    })
-    .on('DELETE', payload => {
-        console.log('Article supprimé:', payload.old);
-        // Mettre à jour l'UI ici
-    })
-    .subscribe();
+  .channel('inventaire-changes')
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'inventaire' }, payload => {
+    console.log('Changement inventaire:', payload);
+    chargerInventaireInitial();
+  })
+  .subscribe();
 
-// Fonction pour persister l'inventaire après le rechargement
-window.addEventListener('load', async () => {
-    const inventory = await fetchInventory();
-    console.log('Inventaire récupéré:', inventory);
-    // Afficher l'inventaire dans l'UI ici
-});
+// Fonction d'affichage et chargement initial
+async function chargerInventaireInitial() {
+  const produits = await fetchInventory();
+  const conteneur = document.getElementById('inventaire');
+  if (!conteneur) return;
+  conteneur.innerHTML = '';
+  if (produits) {
+    produits.forEach(produit => {
+      conteneur.innerHTML += `
+        <div>
+          <strong>${produit.name}</strong> | Qté : ${produit.qty}
+          <button onclick="supprimerProduit(${produit.id})">Supprimer</button>
+        </div>
+      `;
+    });
+  }
+}
+window.onload = chargerInventaireInitial;
