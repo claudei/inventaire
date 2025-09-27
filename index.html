@@ -58,7 +58,7 @@
       button.btn, .rapport-header select { display: none !important; }
     }
   </style>
-  <script src="script.js"></script>
+  <script type="module" src="script.js"></script>
 </head>
 <body>
   <div class="menu">
@@ -464,6 +464,7 @@
     };
     function majInventaire() {
       let tbody = document.getElementById("inventaire-body");
+      if (!tbody) return; // Add null check to prevent TypeError
       tbody.innerHTML = "";
       let totalValeur = 0;
       produits.forEach((prd, idx) => {
@@ -496,7 +497,10 @@
         `;
         tbody.appendChild(tr);
       });
-      document.getElementById("total-inventaire-val").textContent = totalValeur.toFixed(2);
+      let totalElement = document.getElementById("total-inventaire-val");
+      if (totalElement) {
+        totalElement.textContent = totalValeur.toFixed(2);
+      }
     }
     function supprimerProduit(idx) {
       produits.splice(idx, 1);

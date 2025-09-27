@@ -46,17 +46,26 @@ supabase
 // Fonction d'affichage et chargement initial
 async function chargerInventaireInitial() {
   const produits = await fetchInventory();
-  const conteneur = document.getElementById('inventaire');
-  if (!conteneur) return;
-  conteneur.innerHTML = '';
+  const tbody = document.getElementById('inventaire-body');
+  if (!tbody) return;
+  tbody.innerHTML = '';
   if (produits) {
     produits.forEach(produit => {
-      conteneur.innerHTML += `
-        <div>
-          <strong>${produit.name}</strong> | Qté : ${produit.qty}
-          <button onclick="supprimerProduit(${produit.id})">Supprimer</button>
-        </div>
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td>${produit.category || ''}</td>
+        <td>${produit.name}</td>
+        <td>${produit.length || ''}</td>
+        <td>${produit.weight || ''}</td>
+        <td>${produit.price_per_lb || ''}</td>
+        <td>${produit.price_per_bar || ''}</td>
+        <td>${produit.qty}</td>
+        <td>${produit.min_threshold || ''}</td>
+        <td>${produit.to_order || ''}</td>
+        <td>${produit.total_value || ''}</td>
+        <td><button class="btn btn-remove" onclick="supprimerProduit(${produit.id})">Supprimer</button></td>
       `;
+      tbody.appendChild(row);
     });
   }
 }
